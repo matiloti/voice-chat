@@ -1,0 +1,23 @@
+[project]
+name = "voice-chat-backend"
+version = "0.1.0"
+description = "Local voice chat with LangChain agent, real-time STT/TTS, and long-term memory"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "websockets>=13.0",
+    "lightning-whisper-mlx>=0.0.10",
+    "mlx-audio>=0.2.0",
+    "langgraph>=0.4",
+    "langchain>=0.3",
+    "langchain-community>=0.3",
+    "langchain-openai>=0.3",
+    "chromadb>=0.6",
+    "python-dotenv>=1.0",
+    "numpy>=1.26",
+]
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
