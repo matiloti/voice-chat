@@ -28,10 +28,9 @@ Everything runs on your machine. Your conversations stay private.
   - [2. Set Up Ollama (Local LLM)](#2-set-up-ollama-local-llm)
   - [3. Get a Brave Search API Key](#3-get-a-brave-search-api-key)
   - [4. Configure Environment Variables](#4-configure-environment-variables)
-  - [5. Install Backend (Python)](#5-install-backend-python)
-  - [6. Install Frontend (Node.js)](#6-install-frontend-nodejs)
-  - [7. Run the Application](#7-run-the-application)
-  - [8. Open and Use](#8-open-and-use)
+  - [5. Install and Run (Automated)](#5-install-and-run-automated)
+  - [5b. Install and Run (Manual)](#5b-install-and-run-manual)
+  - [6. Open and Use](#6-open-and-use)
 - [How It Works](#how-it-works)
   - [Voice Pipeline](#voice-pipeline)
   - [WebSocket Protocol](#websocket-protocol)
@@ -99,18 +98,18 @@ ollama pull llama3.1
 cp .env.example .env
 # Edit .env → set BRAVE_SEARCH_API_KEY (get free key at https://brave.com/search/api/)
 
-# 3. Backend
-cd backend
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e .
-uvicorn main:app --host 0.0.0.0 --port 8000 &
+# 3. Run everything (creates venv, installs deps, starts both servers)
+./run.sh
 
-# 4. Frontend
-cd ../frontend
-npm install
-npm run dev
+# 4. Open http://localhost:5173 and start talking
+```
 
-# 5. Open http://localhost:5173 and start talking
+`run.sh` handles everything automatically: checks prerequisites, creates the Python virtual environment at `backend/.venv`, installs Python and npm dependencies, starts the backend (port 8000) and frontend (port 5173). On subsequent runs it skips installation and starts instantly.
+
+You can also run components individually:
+```bash
+./run.sh backend   # Backend only (venv + uvicorn)
+./run.sh frontend  # Frontend only (npm)
 ```
 
 ---
@@ -231,24 +230,58 @@ MEMORY_DIR=../memory
 
 The only thing you **must** change is `BRAVE_SEARCH_API_KEY`. Everything else has sensible defaults.
 
-### 5. Install Backend (Python)
+### 5. Install and Run (Automated)
 
+The easiest way — `run.sh` handles venv creation, dependency installation, and starting both servers:
+
+```bash
+# From the project root
+./run.sh
+```
+
+This will:
+1. Check that Python 3.11+ and Node.js 18+ are installed
+2. Create a virtual environment at `backend/.venv` (if it doesn't exist)
+3. Install all Python dependencies into the venv (if not already installed)
+4. Install npm dependencies (if `node_modules/` doesn't exist)
+5. Start the backend on port 8000 (background)
+6. Start the frontend on port 5173 (foreground)
+
+On subsequent runs, it skips all installation steps and starts immediately.
+
+> **On first voice interaction**, you'll see STT and TTS model downloads in the backend logs:
+> ```
+> Loading STT model: distil-large-v3 (this may take a moment on first run)...
+> STT model loaded.
+> Loading TTS model: mlx-community/Kokoro-82M-bf16 ...
+> TTS model loaded.
+> ```
+> The STT model (~1.5 GB) and TTS model (~170 MB) download once and are cached locally.
+
+### 5b. Install and Run (Manual)
+
+If you prefer to manage the venv yourself or run the servers in separate terminals:
+
+**Backend:**
 ```bash
 cd backend
-```
-
-**Create a virtual environment** (recommended):
-```bash
 python3 -m venv .venv
 source .venv/bin/activate
-```
-
-**Install dependencies:**
-```bash
 pip install -e .
+uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-This installs:
+**Frontend (separate terminal):**
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+<details>
+<summary>What gets installed</summary>
+
+**Python packages (in `backend/.venv`):**
 | Package | Purpose |
 |---------|---------|
 | `fastapi` + `uvicorn` | Web server + WebSocket |
@@ -261,21 +294,7 @@ This installs:
 | `python-dotenv` | Environment variable loading |
 | `numpy` | Audio array processing |
 
-> **First install takes 2-5 minutes** due to native compilation of MLX packages. Subsequent installs are fast.
-
-**Verify the install:**
-```bash
-python3 -c "import fastapi, lightning_whisper_mlx, langgraph, chromadb; print('All packages OK')"
-```
-
-### 6. Install Frontend (Node.js)
-
-```bash
-cd frontend
-npm install
-```
-
-This installs:
+**npm packages (in `frontend/node_modules`):**
 | Package | Purpose |
 |---------|---------|
 | `react` + `react-dom` | UI framework |
@@ -285,51 +304,17 @@ This installs:
 | `vite` | Dev server + bundler |
 | `vite-plugin-static-copy` | Copies VAD model files to public directory |
 
-### 7. Run the Application
+> **First install takes 2-5 minutes** due to native compilation of MLX packages.
 
-You need **two terminals** — one for the backend, one for the frontend.
-
-**Terminal 1 — Backend:**
+**Verify the Python install:**
 ```bash
-cd backend
-source .venv/bin/activate  # if using a virtual environment
-uvicorn main:app --host 0.0.0.0 --port 8000
+source backend/.venv/bin/activate
+python3 -c "import fastapi, lightning_whisper_mlx, langgraph, chromadb; print('All packages OK')"
 ```
 
-Expected output:
-```
-INFO:     Started server process
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8000
-```
+</details>
 
-> **On first voice interaction**, you'll see additional logs as STT and TTS models download:
-> ```
-> Loading STT model: distil-large-v3 (this may take a moment on first run)...
-> STT model loaded.
-> Loading TTS model: mlx-community/Kokoro-82M-bf16 ...
-> TTS model loaded.
-> Initializing ChromaDB...
-> ChromaDB initialized with 0 entries.
-> ```
-> The STT model (~1.5 GB) and TTS model (~170 MB) download once and are cached locally.
-
-**Terminal 2 — Frontend:**
-```bash
-cd frontend
-npm run dev
-```
-
-Expected output:
-```
-  VITE v6.x.x  ready in XXXms
-
-  ➜  Local:   http://localhost:5173/
-  ➜  Network: http://192.168.x.x:5173/
-```
-
-### 8. Open and Use
+### 6. Open and Use
 
 1. Open **http://localhost:5173** in Chrome (or any modern browser)
 2. **Allow microphone access** when prompted
@@ -674,6 +659,7 @@ voice-chat/
 ├── .env                              # Your actual config (git-ignored)
 ├── .gitignore
 ├── README.md
+├── run.sh                            # One-command launcher (venv, deps, both servers)
 │
 ├── backend/                          # Python backend
 │   ├── pyproject.toml                # Python dependencies
@@ -753,7 +739,9 @@ curl http://localhost:8000/api/health
 # Should return: {"status":"ok"}
 
 # If not, start it:
-cd backend && source .venv/bin/activate && uvicorn main:app --host 0.0.0.0 --port 8000
+./run.sh backend
+# Or manually:
+source backend/.venv/bin/activate && cd backend && uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
 ### "Ollama not reachable" / LLM errors
@@ -776,10 +764,11 @@ ollama pull llama3.1
 **Cause:** TTS model download failed or mlx-audio not installed correctly.
 ```bash
 # Verify mlx-audio is installed
-cd backend && source .venv/bin/activate
+source backend/.venv/bin/activate
 python3 -c "from mlx_audio.tts.generate import generate_speech; print('OK')"
 
 # If it fails, reinstall:
+source backend/.venv/bin/activate
 pip install --force-reinstall mlx-audio
 ```
 
@@ -788,7 +777,7 @@ pip install --force-reinstall mlx-audio
 **Cause:** Audio is too short, too quiet, or the model failed to load.
 ```bash
 # Test STT directly
-cd backend && source .venv/bin/activate
+source backend/.venv/bin/activate
 python3 -c "
 from lightning_whisper_mlx import LightningWhisperMLX
 w = LightningWhisperMLX(model='distil-large-v3', batch_size=12)
@@ -850,12 +839,17 @@ npm run dev
 ### Backend hot-reload
 
 ```bash
+# Using run.sh (activates venv automatically):
+./run.sh backend
+# Then Ctrl+C and restart — or use --reload directly:
+
+# Manual with hot-reload:
+source backend/.venv/bin/activate
 cd backend
-source .venv/bin/activate
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-The `--reload` flag watches for file changes and restarts the server. Models stay lazy-loaded, so restarts are fast.
+The `--reload` flag watches for file changes and restarts the server. Models stay lazy-loaded, so restarts are fast. The venv at `backend/.venv` is always used — never install packages globally.
 
 ### Frontend hot-reload
 
