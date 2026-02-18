@@ -9,13 +9,18 @@ const PING_INTERVAL_MS = 15000;
 
 export function useWebSocket(onMessage: (msg: ServerMessage) => void) {
   const wsRef = useRef<WebSocket | null>(null);
+  const onMessageRef = useRef(onMessage);
   const reconnectAttempt = useRef(0);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
   const pingTimer = useRef<ReturnType<typeof setInterval>>();
-  const { setConnected } = useChatStore();
+  const setConnected = useChatStore((s) => s.setConnected);
+
+  // Keep ref up to date without triggering reconnects
+  onMessageRef.current = onMessage;
 
   const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    if (wsRef.current?.readyState === WebSocket.OPEN ||
+        wsRef.current?.readyState === WebSocket.CONNECTING) return;
 
     const ws = new WebSocket(WS_URL);
     wsRef.current = ws;
@@ -35,7 +40,7 @@ export function useWebSocket(onMessage: (msg: ServerMessage) => void) {
     ws.onmessage = (event) => {
       try {
         const msg: ServerMessage = JSON.parse(event.data);
-        onMessage(msg);
+        onMessageRef.current(msg);
       } catch (e) {
         console.error("Failed to parse WS message:", e);
       }
@@ -51,7 +56,7 @@ export function useWebSocket(onMessage: (msg: ServerMessage) => void) {
       console.error("WebSocket error:", err);
       ws.close();
     };
-  }, [onMessage, setConnected]);
+  }, [setConnected]);
 
   const scheduleReconnect = useCallback(() => {
     const delay = Math.min(

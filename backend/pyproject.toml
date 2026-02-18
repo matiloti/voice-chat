@@ -4,19 +4,29 @@ version = "0.1.0"
 description = "Local voice chat with LangChain agent, real-time STT/TTS, and long-term memory"
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi>=0.115",
-    "uvicorn[standard]>=0.32",
-    "websockets>=13.0",
-    "lightning-whisper-mlx>=0.0.10",
+    "fastapi>=0.115,<1",
+    "uvicorn[standard]>=0.32,<1",
+    "websockets>=13.0,<14",
     "mlx-audio>=0.2.0",
-    "langgraph>=0.4",
-    "langchain>=0.3",
-    "langchain-community>=0.3",
-    "langchain-openai>=0.3",
-    "chromadb>=0.6",
-    "python-dotenv>=1.0",
-    "numpy>=1.26",
+    "langgraph>=0.4,<1.1",
+    "langchain>=0.3,<0.4",
+    "langchain-community>=0.3,<0.4",
+    "langchain-openai>=0.3,<0.4",
+    "chromadb>=0.6,<1",
+    "python-dotenv>=1.0,<2",
+    "numpy>=1.26,<3",
+    "pyyaml>=6.0.1",
+    # lightning-whisper-mlx deps (installed --no-deps due to tiktoken pin conflict)
+    "huggingface-hub",
+    "mlx",
+    "numba",
+    "torch",
+    "more-itertools",
+    "tiktoken>=0.7",
 ]
+
+[tool.setuptools]
+py-modules = ["main", "config", "agent", "tools", "memory", "stt", "tts", "ws_handler", "heartbeat", "protocol"]
 
 [build-system]
 requires = ["setuptools>=75"]

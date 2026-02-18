@@ -17,6 +17,9 @@ export default function App() {
   // Initialize VAD — only processes audio when mic is enabled and connected
   useMicVAD({
     startOnLoad: true,
+    model: "legacy",
+    baseAssetPath: "/vad/",
+    onnxWASMBasePath: "/vad/",
     onSpeechStart: () => {
       if (micEnabled && isConnected) {
         onSpeechStart();
@@ -26,11 +29,6 @@ export default function App() {
       if (micEnabled && isConnected) {
         onSpeechEnd(audio);
       }
-    },
-    workletURL: "/vad/vad.worklet.bundle.min.js",
-    modelURL: "/vad/silero_vad_legacy.onnx",
-    ortConfig: (ort) => {
-      ort.env.wasm.wasmPaths = "/vad/";
     },
   });
 

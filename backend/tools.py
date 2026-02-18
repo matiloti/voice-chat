@@ -22,7 +22,7 @@ def get_brave_search_tool():
             return "Brave Search API key not configured. Please set BRAVE_SEARCH_API_KEY in .env"
 
         try:
-            from langchain_community.tools.brave_search import BraveSearch as BraveSearchTool
+            from langchain_community.tools.brave_search.tool import BraveSearch as BraveSearchTool
             search = BraveSearchTool.from_api_key(
                 api_key=settings.brave_search_api_key,
                 search_kwargs={"count": 3},

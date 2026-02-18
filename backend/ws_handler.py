@@ -121,7 +121,17 @@ async def process_agent_response(
             if event_type == "on_chat_model_stream":
                 chunk = event.get("data", {}).get("chunk")
                 if chunk and hasattr(chunk, "content") and chunk.content:
-                    token = chunk.content
+                    raw = chunk.content
+                    # content may be a list of blocks (e.g. reasoning models)
+                    if isinstance(raw, list):
+                        token = "".join(
+                            b.get("text", "") if isinstance(b, dict) else str(b)
+                            for b in raw
+                        )
+                    else:
+                        token = raw
+                    if not token:
+                        continue
                     sentence_buffer += token
                     full_text += token
 
@@ -276,8 +286,9 @@ async def handle_connection(ws: WebSocket) -> None:
                     message_id=message_id,
                 )))
 
-                # Process with agent
-                await process_agent_response(ws, transcript, message_id)
+                # Process with agent (separate ID for assistant response)
+                assistant_id = new_message_id()
+                await process_agent_response(ws, transcript, assistant_id)
                 scheduler.resume()
 
             elif msg_type == "text_input":
@@ -295,8 +306,9 @@ async def handle_connection(ws: WebSocket) -> None:
                     message_id=message_id,
                 )))
 
-                # Process with agent
-                await process_agent_response(ws, text, message_id)
+                # Process with agent (separate ID for assistant response)
+                assistant_id = new_message_id()
+                await process_agent_response(ws, text, assistant_id)
                 scheduler.resume()
 
             else:

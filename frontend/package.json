@@ -9,10 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ricky0123/vad-react": "^0.0.36",
+    "onnxruntime-web": "^1.21.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "@ricky0123/vad-react": "^0.0.30",
-    "onnxruntime-web": "^1.21.0",
     "zustand": "^5.0.0"
   },
   "devDependencies": {

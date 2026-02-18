@@ -13,7 +13,7 @@ class TTSEngine:
     """Lazy-loading Kokoro TTS wrapper."""
 
     def __init__(self) -> None:
-        self._pipeline = None
+        self._model = None
         self._sample_rate = 24000
 
     @property
@@ -21,14 +21,13 @@ class TTSEngine:
         return self._sample_rate
 
     def _ensure_loaded(self) -> None:
-        if self._pipeline is not None:
+        if self._model is not None:
             return
         logger.info("Loading TTS model: %s ...", settings.tts_model)
-        from mlx_audio.tts.generate import generate_speech
-        # Store the generate function — we'll call it per sentence
-        self._generate = generate_speech
-        self._pipeline = True  # Mark as loaded
-        logger.info("TTS model loaded.")
+        from mlx_audio.tts.generate import load_model
+        self._model = load_model(settings.tts_model)
+        self._sample_rate = self._model.sample_rate
+        logger.info("TTS model loaded (sample_rate=%d).", self._sample_rate)
 
     def _synthesize_sync(self, text: str) -> bytes:
         """Synchronous TTS generation. Returns raw PCM float32 bytes at 24kHz."""
@@ -38,26 +37,23 @@ class TTSEngine:
             return b""
 
         try:
-            # mlx-audio generate_speech returns audio array
-            audio = self._generate(
+            results = self._model.generate(
                 text=text,
-                model_id_or_path=settings.tts_model,
                 voice=settings.tts_voice,
             )
 
-            # Convert to numpy float32
-            if hasattr(audio, "numpy"):
-                audio_np = np.array(audio, dtype=np.float32)
-            elif isinstance(audio, np.ndarray):
-                audio_np = audio.astype(np.float32)
-            else:
-                audio_np = np.array(audio, dtype=np.float32)
+            audio_parts = []
+            for result in results:
+                audio_np = np.array(result.audio, dtype=np.float32)
+                if audio_np.ndim > 1:
+                    audio_np = audio_np.flatten()
+                audio_parts.append(audio_np)
 
-            # Flatten if needed
-            if audio_np.ndim > 1:
-                audio_np = audio_np.flatten()
+            if not audio_parts:
+                return b""
 
-            return audio_np.tobytes()
+            audio = np.concatenate(audio_parts) if len(audio_parts) > 1 else audio_parts[0]
+            return audio.tobytes()
 
         except Exception as e:
             logger.error("TTS synthesis failed: %s", e)

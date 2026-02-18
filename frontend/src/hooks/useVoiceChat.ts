@@ -75,7 +75,6 @@ export function useVoiceChat() {
         case "transcript_final":
           store.addUserMessage(msg.message_id, msg.text);
           store.setAppState("thinking");
-          activeMessageRef.current = msg.message_id;
           break;
 
         case "agent_text_delta":
